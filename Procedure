@@ -1,0 +1,18 @@
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `kmeans`(v_K int)
+BEGIN
+TRUNCATE laytrip.km_clusters;
+
+INSERT INTO laytrip.km_clusters (volatility, shape) SELECT volatility, shape FROM laytrip.km_data LIMIT v_K;
+REPEAT
+    
+    UPDATE laytrip.km_data d SET cluster_id = (SELECT id FROM laytrip.km_clusters c 
+        ORDER BY POW(d.volatility-c.volatility,2)+POW(d.shape-c.shape,2) ASC LIMIT 1);
+    
+    UPDATE km_clusters C, (SELECT cluster_id, 
+        AVG(volatility) AS volatility, AVG(shape) AS shape 
+        FROM laytrip.km_data GROUP BY cluster_id) D 
+    SET C.volatility=D.volatility, C.shape=D.shape WHERE C.id=D.cluster_id;
+UNTIL ROW_COUNT() = 0 END REPEAT;
+END$$
+DELIMITER ;
